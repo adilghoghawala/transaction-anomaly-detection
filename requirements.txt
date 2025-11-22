@@ -1,0 +1,11 @@
+
+---
+
+## 3. `requirements.txt` (minimal to start)
+
+```txt
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
