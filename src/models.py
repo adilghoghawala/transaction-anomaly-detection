@@ -1,3 +1,5 @@
+# src/models.py
+
 from typing import Tuple
 
 import numpy as np
@@ -6,14 +8,15 @@ from sklearn.svm import OneClassSVM
 from sklearn.neighbors import LocalOutlierFactor
 
 
+# ---------------------------
+# Isolation Forest
+# ---------------------------
+
 def fit_isolation_forest(
     X_train: np.ndarray,
     contamination: float = 0.02,
     random_state: int = 42,
 ) -> IsolationForest:
-    """
-    Train an Isolation Forest on the training data.
-    """
     clf = IsolationForest(
         n_estimators=200,
         contamination=contamination,
@@ -24,13 +27,65 @@ def fit_isolation_forest(
     return clf
 
 
-def score_isolation_forest(
-    model: IsolationForest,
-    X: np.ndarray,
+def score_isolation_forest(model: IsolationForest, X: np.ndarray) -> np.ndarray:
+    # decision_function: higher = more normal → negate
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# One-Class SVM
+# ---------------------------
+
+def fit_oneclass_svm(
+    X_train: np.ndarray,
+    nu: float = 0.02,
+    gamma: str = "scale",
+) -> OneClassSVM:
+    clf = OneClassSVM(
+        kernel="rbf",
+        nu=nu,
+        gamma=gamma,
+    )
+    clf.fit(X_train)
+    return clf
+
+
+def score_oneclass_svm(model: OneClassSVM, X: np.ndarray) -> np.ndarray:
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# Local Outlier Factor
+# ---------------------------
+
+def fit_lof(
+    X_train: np.ndarray,
+    n_neighbors: int = 20,
+    contamination: float = 0.02,
+) -> LocalOutlierFactor:
+    clf = LocalOutlierFactor(
+        n_neighbors=n_neighbors,
+        contamination=contamination,
+        novelty=True,
+    )
+    clf.fit(X_train)
+    return clf
+
+
+def score_lof(model: LocalOutlierFactor, X: np.ndarray) -> np.ndarray:
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# Helper: convert scores → 0/1 labels
+# ---------------------------
+
+def scores_to_labels(
+    scores: np.ndarray,
+    fraction_anomalies: float = 0.02,
 ) -> np.ndarray:
     """
-    Return anomaly scores (higher = more anomalous).
+    Mark the top `fraction_anomalies` scores as anomalies (1), rest as 0.
     """
-    # decision_function returns (higher = more normal), so negate it
-    scores = -model.decision_function(X)
-    return scores
+    threshold = np.quantile(scores, 1 - fraction_anomalies)
+    return (scores >= threshold).astype(int)
