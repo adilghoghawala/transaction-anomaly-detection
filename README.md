@@ -13,6 +13,8 @@ This project uses the **Credit Card Fraud Detection** dataset from ULB (Universi
 
 For the anomaly detection problem, models are trained in an **unsupervised** way (using only features), and the `Class` label is used **only for evaluation** (to see how well the anomaly scores align with actual frauds).
 
+CSV can be installed here: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud?resource=download
+
 Place the file at:
 
 ```text
