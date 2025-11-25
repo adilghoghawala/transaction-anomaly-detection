@@ -1,44 +1,126 @@
+# src/models.py
+
 from typing import Tuple
 
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import IsolationForest
+from sklearn.svm import OneClassSVM
+from sklearn.neighbors import LocalOutlierFactor
 
 
-FEATURE_COLUMNS = [f"V{i}" for i in range(1, 29)] + ["Time", "Amount"]
-TARGET_COLUMN = "Class"
+# ---------------------------
+# Isolation Forest
+# ---------------------------
 
-
-def train_test_preprocess(
-    df: pd.DataFrame,
-    test_size: float = 0.2,
+def fit_isolation_forest(
+    X_train: np.ndarray,
+    contamination: float = 0.02,
     random_state: int = 42,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> IsolationForest:
     """
-    Split the dataset into train/test and apply scaling to features.
-
-    Returns
-    -------
-    X_train, X_test, y_train, y_test : np.ndarray
+    Train an Isolation Forest on the training data.
     """
-    # Drop any rows with NA just to be safe (dataset usually has none)
-    df = df.dropna().copy()
-
-    X = df[FEATURE_COLUMNS].values
-    y = df[TARGET_COLUMN].values
-
-    # IMPORTANT: Use stratify so that the tiny fraud class is preserved in test
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=test_size,
-        stratify=y,
+    clf = IsolationForest(
+        n_estimators=200,
+        contamination=contamination,
         random_state=random_state,
+        n_jobs=-1,
     )
+    clf.fit(X_train)
+    return clf
 
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
 
-    return X_train_scaled, X_test_scaled, y_train, y_test
+def score_isolation_forest(
+    model: IsolationForest,
+    X: np.ndarray,
+) -> np.ndarray:
+    """
+    Return anomaly scores (higher = more anomalous).
+    IsolationForest.decision_function returns higher = more normal,
+    so we negate it.
+    """
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# One-Class SVM
+# ---------------------------
+
+def fit_oneclass_svm(
+    X_train: np.ndarray,
+    nu: float = 0.02,
+    gamma: str = "scale",
+) -> OneClassSVM:
+    """
+    Train a One-Class SVM on the training data.
+    nu ~ expected fraction of anomalies.
+    """
+    clf = OneClassSVM(
+        kernel="rbf",
+        nu=nu,
+        gamma=gamma,
+    )
+    clf.fit(X_train)
+    return clf
+
+
+def score_oneclass_svm(
+    model: OneClassSVM,
+    X: np.ndarray,
+) -> np.ndarray:
+    """
+    Return anomaly scores (higher = more anomalous).
+    OneClassSVM.decision_function returns higher = more normal,
+    so we negate it.
+    """
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# Local Outlier Factor (LOF)
+# ---------------------------
+
+def fit_lof(
+    X_train: np.ndarray,
+    n_neighbors: int = 20,
+    contamination: float = 0.02,
+) -> LocalOutlierFactor:
+    """
+    Train Local Outlier Factor model for novelty detection.
+    Set novelty=True so we can call decision_function/predict on new data.
+    """
+    clf = LocalOutlierFactor(
+        n_neighbors=n_neighbors,
+        contamination=contamination,
+        novelty=True,
+    )
+    clf.fit(X_train)
+    return clf
+
+
+def score_lof(
+    model: LocalOutlierFactor,
+    X: np.ndarray,
+) -> np.ndarray:
+    """
+    Return anomaly scores (higher = more anomalous).
+    LOF.decision_function returns higher = more normal,
+    so we negate it.
+    """
+    return -model.decision_function(X)
+
+
+# ---------------------------
+# Optional helper: scores → labels
+# ---------------------------
+
+def scores_to_labels(
+    scores: np.ndarray,
+    fraction_anomalies: float = 0.02,
+) -> np.ndarray:
+    """
+    Convert continuous anomaly scores into binary labels.
+    Marks the top `fraction_anomalies` scores as anomalies (1), rest as 0.
+    """
+    threshold = np.quantile(scores, 1 - fraction_anomalies)
+    return (scores >= threshold).astype(int)
