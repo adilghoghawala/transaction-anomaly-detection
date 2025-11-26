@@ -19,9 +19,9 @@ Place the file at:
 
 ```text
 data/raw/creditcard.csv
+```
 
 ## Project Motivation
-
 Financial institutions process hundreds of thousands of credit card transactions every day, but only a tiny fraction are actually fraudulent. Labels for fraud are often delayed, incomplete, or noisy, which makes it difficult to rely solely on fully supervised models. However, the business still needs a way to automatically flag **suspicious transactions** so that fraud analysts can prioritize their review time.
 
 This project builds an **unsupervised anomaly detection pipeline** using the ULB Credit Card Fraud dataset. The goal is to learn what “normal” transaction behavior looks like and assign each transaction an **anomaly score** indicating how unusual it is compared to the majority of data. Higher scores correspond to more suspicious transactions.
